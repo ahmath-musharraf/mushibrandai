@@ -151,15 +151,16 @@ export const App: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        if (window.aistudio) {
-            const hasKey = await window.aistudio.hasSelectedApiKey();
+        if ((window as any).aistudio) {
+            const hasKey = await (window as any).aistudio.hasSelectedApiKey();
             if (hasKey) {
                 setAuthStatus('authenticated');
             } else {
                 setAuthStatus('unauthenticated');
             }
         } else {
-            // If we are not in the specific environment, default to unauthenticated to show the landing page
+            // If we are not in the specific environment, we assume unauthenticated initially
+            // allowing the user to click login to bypass if configured via env
             setAuthStatus('unauthenticated');
         }
       } catch (e) {
@@ -171,16 +172,19 @@ export const App: React.FC = () => {
   }, []);
 
   const handleLogin = async () => {
-    if (window.aistudio) {
+    if ((window as any).aistudio) {
         try {
-            await window.aistudio.openSelectKey();
+            await (window as any).aistudio.openSelectKey();
             setAuthStatus('authenticated');
         } catch (e) {
             console.error(e);
             alert("Login failed. Please try again.");
         }
     } else {
-        alert("Authentication provider not found.");
+        // Fallback for environments without window.aistudio (e.g. local dev, standard hosting)
+        // We assume the API key is provided via process.env.API_KEY
+        console.log("No auth provider found, utilizing environment API key.");
+        setAuthStatus('authenticated');
     }
   };
 
@@ -812,144 +816,105 @@ export const App: React.FC = () => {
     );
   };
 
+  if (authStatus === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (authStatus === 'unauthenticated') {
+    return <LandingPage onLogin={handleLogin} onGuest={handleGuestAccess} />;
+  }
+
   return (
-    <>
-      {authStatus === 'loading' && (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        </div>
-      )}
+    <div className="min-h-screen bg-slate-50 font-sans text-gray-900">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 flex items-center gap-2 cursor-pointer" onClick={() => { setActiveModule('campaign'); reset(); }}>
+                {(!navLogoError && LOGO_URL) ? (
+                    <img src={LOGO_URL} alt="Logo" className="h-8 w-auto" onError={() => setNavLogoError(true)} />
+                ) : (
+                    <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <Rocket className="text-white w-5 h-5" />
+                    </div>
+                )}
+                <span className="font-bold text-xl tracking-tight text-gray-900">MushiBrand<span className="text-indigo-600">AI</span></span>
+              </div>
+              
+              <div className="hidden md:ml-10 md:flex md:space-x-8">
+                <button
+                  onClick={() => setActiveModule('campaign')}
+                  className={`${activeModule === 'campaign' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
+                >
+                  <LayoutDashboard size={18} className="mr-2" /> Campaign Studio
+                </button>
+                <button
+                  onClick={() => setActiveModule('media')}
+                  className={`${activeModule === 'media' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
+                >
+                  <ImageIcon size={18} className="mr-2" /> Media Analyzer
+                </button>
+                <button
+                  onClick={() => setActiveModule('landing')}
+                  className={`${activeModule === 'landing' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
+                >
+                  <LayoutTemplate size={18} className="mr-2" /> Landing Page
+                </button>
+                <button
+                  onClick={() => setActiveModule('experts')}
+                  className={`${activeModule === 'experts' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
+                >
+                  <Users size={18} className="mr-2" /> Expert Chat
+                </button>
+                <button
+                  onClick={() => setActiveModule('report')}
+                  className={`${activeModule === 'report' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
+                >
+                  <FileText size={18} className="mr-2" /> Report
+                </button>
+              </div>
+            </div>
 
-      {authStatus === 'unauthenticated' && (
-        <LandingPage onLogin={handleLogin} onGuest={handleGuestAccess} />
-      )}
-
-      {(authStatus === 'authenticated' || authStatus === 'guest') && (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
-           {/* Sidebar - Desktop */}
-           <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full z-10">
-               <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-                   {(!navLogoError && LOGO_URL) ? (
-                     <img 
-                       src={LOGO_URL} 
-                       alt="Logo" 
-                       className="w-8 h-8 object-contain"
-                       onError={() => setNavLogoError(true)}
-                     />
-                   ) : (
-                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                        <Rocket size={20} />
-                     </div>
-                   )}
-                   <span className="font-bold text-xl tracking-tight text-gray-900">MushiBrand</span>
-               </div>
-               
-               <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                  <button 
-                    onClick={() => setActiveModule('campaign')}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeModule === 'campaign' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-                  >
-                    <LayoutDashboard size={18} />
-                    Campaign Studio
-                  </button>
-                  <button 
-                    onClick={() => setActiveModule('media')}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeModule === 'media' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-                  >
-                    <ImageIcon size={18} />
-                    Media Analyzer
-                  </button>
-                   <button 
-                    onClick={() => setActiveModule('landing')}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeModule === 'landing' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-                  >
-                    <LayoutTemplate size={18} />
-                    Landing Page
-                  </button>
-                  <button 
-                    onClick={() => setActiveModule('experts')}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeModule === 'experts' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-                  >
-                    <Users size={18} />
-                    Expert Boardroom
-                  </button>
-                  <button 
-                    onClick={() => setActiveModule('report')}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeModule === 'report' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
-                  >
-                    <FileText size={18} />
-                    Strategy Report
-                  </button>
-               </nav>
-
-               <div className="p-4 border-t border-gray-100">
-                  <div className="flex items-center gap-3 px-3 py-2">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                        {authStatus === 'guest' ? 'G' : 'U'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{authStatus === 'guest' ? 'Guest User' : 'Pro User'}</p>
-                          <p className="text-xs text-gray-500 truncate">{authStatus === 'guest' ? 'Limited Access' : 'Premium Plan'}</p>
-                      </div>
-                  </div>
-               </div>
-           </aside>
-
-           {/* Mobile Header */}
-           <div className="md:hidden fixed top-0 w-full bg-white border-b border-gray-200 z-20 px-4 py-3 flex justify-between items-center">
+            <div className="flex items-center">
                <div className="flex items-center gap-2">
-                   <Rocket className="text-indigo-600" size={24} />
-                   <span className="font-bold text-lg text-gray-900">MushiBrand</span>
+                 {authStatus === 'guest' && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium border border-orange-200">Guest Mode</span>}
+                 {authStatus === 'authenticated' && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium border border-green-200">Pro Plan</span>}
                </div>
-               <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-600">
-                   {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-               </button>
-           </div>
-
-           {/* Mobile Menu Overlay */}
-           {mobileMenuOpen && (
-               <div className="fixed inset-0 bg-white z-10 pt-20 px-4 md:hidden">
-                   <nav className="space-y-2">
-                      <button 
-                        onClick={() => { setActiveModule('campaign'); setMobileMenuOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeModule === 'campaign' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}
-                      >
-                        <LayoutDashboard size={20} /> Campaign Studio
-                      </button>
-                      <button 
-                        onClick={() => { setActiveModule('media'); setMobileMenuOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeModule === 'media' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}
-                      >
-                        <ImageIcon size={20} /> Media Analyzer
-                      </button>
-                      <button 
-                        onClick={() => { setActiveModule('landing'); setMobileMenuOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeModule === 'landing' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}
-                      >
-                        <LayoutTemplate size={20} /> Landing Page
-                      </button>
-                      <button 
-                        onClick={() => { setActiveModule('experts'); setMobileMenuOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeModule === 'experts' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}
-                      >
-                        <Users size={20} /> Expert Boardroom
-                      </button>
-                      <button 
-                        onClick={() => { setActiveModule('report'); setMobileMenuOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeModule === 'report' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}
-                      >
-                        <FileText size={20} /> Strategy Report
-                      </button>
-                   </nav>
+               <div className="-mr-2 flex items-center md:hidden ml-4">
+                  <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none">
+                    {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
                </div>
-           )}
-
-           {/* Main Content */}
-           <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 overflow-x-hidden">
-               {renderContent()}
-           </main>
+            </div>
+          </div>
         </div>
-      )}
-    </>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-b border-gray-200">
+            <div className="pt-2 pb-3 space-y-1 px-4">
+               {['campaign', 'media', 'landing', 'experts', 'report'].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => { setActiveModule(m as any); setMobileMenuOpen(false); }}
+                    className={`block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium ${activeModule === m ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'}`}
+                  >
+                    {m.charAt(0).toUpperCase() + m.slice(1)}
+                  </button>
+               ))}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {renderContent()}
+      </main>
+    </div>
   );
 };
