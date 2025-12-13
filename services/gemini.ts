@@ -3,11 +3,14 @@ import { GeneratedCampaign, MarketingBrief, ExpertPersona, LandingPageContent } 
 
 // Helper function to create a fresh client instance with the current API key
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
+  // Check process.env first, then localStorage
+  const apiKey = process.env.API_KEY || localStorage.getItem('gemini_api_key');
+  
   if (!apiKey) {
     console.warn("API Key is missing. Ensure you have selected a key.");
+    throw new Error("API Key is missing. Please add your API key in the settings.");
   }
-  return new GoogleGenAI({ apiKey: apiKey || '' });
+  return new GoogleGenAI({ apiKey });
 };
 
 // --- Campaign Generation ---
