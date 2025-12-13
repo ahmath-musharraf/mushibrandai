@@ -70,12 +70,13 @@ export const generateMarketingCampaign = async (brief: MarketingBrief): Promise<
     4. 3 Frequently Asked Questions (Question, Answer).
   `;
 
-  const prompt = `
+  const systemInstruction = `
     Act as a world-class digital marketing strategist. 
     Create a comprehensive ad campaign for the following product.
-    
     IMPORTANT: Provide all text content in the following language: ${brief.language}.
-    
+  `;
+
+  const userPrompt = `
     Product: ${brief.productName}
     Industry Category: ${brief.category}
     Description: ${brief.description}
@@ -95,8 +96,9 @@ export const generateMarketingCampaign = async (brief: MarketingBrief): Promise<
   // Using gemini-3-pro-preview for complex text generation tasks
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: prompt,
+    contents: userPrompt,
     config: {
+      systemInstruction: systemInstruction,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
