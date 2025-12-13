@@ -1,12 +1,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GeneratedCampaign, MarketingBrief, ExpertPersona, LandingPageContent } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+// Helper function to create a fresh client instance with the current API key
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("API Key is missing. Ensure you have selected a key.");
+  }
+  return new GoogleGenAI({ apiKey: apiKey || '' });
+};
 
 // --- Campaign Generation ---
 
 export const generateMarketingCampaign = async (brief: MarketingBrief): Promise<GeneratedCampaign> => {
+  const ai = getAiClient();
   const platforms = brief.platforms && brief.platforms.length > 0 ? brief.platforms : ['Google', 'Meta'];
   
   const platformPrompts = [];
@@ -298,6 +305,7 @@ export const generateMarketingCampaign = async (brief: MarketingBrief): Promise<
 // --- Image Generation ---
 
 export const generateCreativeImage = async (imagePrompt: string, negativePrompt?: string, aspectRatio: string = "1:1"): Promise<string> => {
+  const ai = getAiClient();
   try {
     let prompt = `Generate a professional, high-quality advertising image based on this description: ${imagePrompt}.`;
     
@@ -329,6 +337,7 @@ export const generateCreativeImage = async (imagePrompt: string, negativePrompt?
     throw new Error("No image generated");
   } catch (error) {
     console.error("Image generation failed:", error);
+    // Fallback for visual testing if API fails or quota exceeded
     return `https://picsum.photos/seed/${encodeURIComponent(imagePrompt.slice(0, 10))}/800/800`;
   }
 };
@@ -336,12 +345,15 @@ export const generateCreativeImage = async (imagePrompt: string, negativePrompt?
 // --- Media Analysis ---
 
 export const analyzeUploadedMedia = async (file: File, language: string): Promise<string> => {
+    const ai = getAiClient();
+    
     // helper to convert to base64
     const fileToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
                 const result = reader.result as string;
+                // remove data:image/jpeg;base64, prefix
                 const base64 = result.split(',')[1];
                 resolve(base64);
             };
@@ -350,34 +362,43 @@ export const analyzeUploadedMedia = async (file: File, language: string): Promis
         });
     };
 
-    const base64Data = await fileToBase64(file);
-    
-    // Prompt
-    const prompt = `Analyze this visual content (image or video frame) for a digital marketing context.
-    1. Describe what is visible in detail.
-    2. Identify the mood and emotional tone.
-    3. Assess the visual quality and aesthetics.
-    4. Suggest 3 marketing headlines that would pair well with this visual.
-    5. Suggest a target audience that would resonate with this visual.
-    
-    Provide the response strictly in ${language}.`;
+    try {
+        const base64Data = await fileToBase64(file);
+        
+        // Prompt
+        const prompt = `Analyze this visual content (image or video frame) for a digital marketing context.
+        1. Describe what is visible in detail.
+        2. Identify the mood and emotional tone.
+        3. Assess the visual quality and aesthetics.
+        4. Suggest 3 marketing headlines that would pair well with this visual.
+        5. Suggest a target audience that would resonate with this visual.
+        
+        Provide the response strictly in ${language}.`;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: {
-            parts: [
-                { inlineData: { mimeType: file.type, data: base64Data } },
-                { text: prompt }
-            ]
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: file.type, data: base64Data } },
+                    { text: prompt }
+                ]
+            }
+        });
+
+        return response.text || "Could not analyze media.";
+    } catch (error: any) {
+        console.error("Media analysis error:", error);
+        if (error.message?.includes("413")) {
+            throw new Error("File is too large. Please upload a smaller file.");
         }
-    });
-
-    return response.text || "Could not analyze media.";
+        throw error;
+    }
 };
 
 // --- Expert Chat ---
 
 export const createExpertChatSession = (persona: ExpertPersona, brief: MarketingBrief) => {
+  const ai = getAiClient();
   const context = `
     Context for this conversation:
     Product: ${brief.productName}
@@ -402,6 +423,7 @@ export const createExpertChatSession = (persona: ExpertPersona, brief: Marketing
 
 // --- Landing Page Content ---
 export const generateLandingPageContent = async (brief: MarketingBrief): Promise<LandingPageContent> => {
+    const ai = getAiClient();
     const prompt = `
     Create a high-converting Landing Page structure for the following product:
     Product: ${brief.productName}
@@ -477,6 +499,7 @@ export const generateLandingPageContent = async (brief: MarketingBrief): Promise
 // --- Report Generation ---
 
 export const generateStrategyReport = async (brief: MarketingBrief): Promise<string> => {
+  const ai = getAiClient();
   const prompt = `
     Create a professional, detailed Digital Marketing Strategy Report for the following client.
     
