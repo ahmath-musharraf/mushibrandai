@@ -45,7 +45,8 @@ import {
   Rocket,
   Key,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
 
 // Placeholder Logo URL
@@ -217,6 +218,7 @@ export const App: React.FC = () => {
   const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated' | 'guest'>('loading');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasGoogleAuth, setHasGoogleAuth] = useState(false);
+  const [isEnvKey, setIsEnvKey] = useState(false);
 
   // Navigation State
   const [activeModule, setActiveModule] = useState<'campaign' | 'media' | 'landing' | 'experts' | 'report'>('campaign');
@@ -246,6 +248,7 @@ export const App: React.FC = () => {
         if (process.env.API_KEY && process.env.API_KEY.length > 0) {
             console.log("API Key detected in environment.");
             setAuthStatus('authenticated');
+            setIsEnvKey(true);
             return;
         }
 
@@ -937,8 +940,6 @@ export const App: React.FC = () => {
     );
   };
 
-  // Missing App return logic restored here:
-  
   if (authStatus === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -1017,17 +1018,27 @@ export const App: React.FC = () => {
                          {authStatus === 'guest' ? 'Guest User' : 'Pro Plan'}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
-                         {authStatus === 'guest' ? 'Limited Access' : 'Active'}
+                         {authStatus === 'guest' ? 'Limited Access' : (isEnvKey ? 'Env Key Active' : 'Active')}
                       </p>
                    </div>
                 </div>
              </div>
-             <button 
-                onClick={() => { localStorage.removeItem('gemini_api_key'); setAuthStatus('unauthenticated'); setCampaign(null); }} 
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors"
-             >
-                <LogIn className="rotate-180" size={18} /> Sign Out
-             </button>
+             
+             {isEnvKey ? (
+                 <button 
+                    onClick={() => { setCampaign(null); setActiveModule('campaign'); }} 
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+                 >
+                    <RefreshCw size={18} /> Reset App
+                 </button>
+             ) : (
+                 <button 
+                    onClick={() => { localStorage.removeItem('gemini_api_key'); setAuthStatus('unauthenticated'); setCampaign(null); }} 
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors"
+                 >
+                    <LogIn className="rotate-180" size={18} /> Sign Out
+                 </button>
+             )}
           </div>
         </div>
       </aside>
