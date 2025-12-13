@@ -42,12 +42,93 @@ import {
   Image as ImageIcon,
   LayoutTemplate,
   Lightbulb,
-  Rocket
+  Rocket,
+  Key,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 
-// Placeholder Logo URL - Replace this with your actual logo URL or local path (e.g., '/logo.png')
-// If you leave this empty or the image fails to load, the Rocket icon will be shown instead.
+// Placeholder Logo URL
 const LOGO_URL = "https://img.logoipsum.com/297.svg";
+
+// --- API Key Modal Component ---
+interface ApiKeyModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (key: string) => void;
+}
+
+const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSave }) => {
+    const [key, setKey] = useState('');
+    
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[#0f172a] text-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-800 transform transition-all scale-100">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/3 -translate-y-1/3 pointer-events-none">
+                        <Key size={120} />
+                    </div>
+                    <h2 className="text-xl font-bold flex items-center gap-2 relative z-10">
+                        <Key className="w-5 h-5" /> Setup API Key
+                    </h2>
+                    <p className="text-blue-100 text-sm mt-1 relative z-10">
+                        To use MushiBrandAI, you need a free Google Gemini API key.
+                    </p>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6 space-y-6">
+                    <p className="text-gray-300 text-sm">
+                        This application is powered by Google's Gemini models. It requires an API Key to function. Don't worry, it's <span className="font-bold text-white">free</span> for personal use!
+                    </p>
+                    
+                    <a 
+                        href="https://aistudio.google.com/app/apikey" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between w-full px-4 py-3 bg-[#1e293b] hover:bg-[#334155] border border-gray-700 rounded-xl transition-colors group text-sm"
+                    >
+                        <span className="font-medium text-blue-400">Get Free Gemini API Key</span>
+                        <ExternalLink size={16} className="text-gray-500 group-hover:text-blue-400" />
+                    </a>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Paste your API Key here</label>
+                        <input 
+                            type="password" 
+                            value={key}
+                            onChange={(e) => setKey(e.target.value)}
+                            placeholder="AIzaSy..."
+                            className="w-full bg-[#020617] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                        />
+                        <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                            <ShieldCheck size={12} /> Your key is stored locally in your browser.
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                         <button 
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-700 text-gray-300 font-medium hover:bg-gray-800 transition-colors text-sm"
+                         >
+                            Cancel
+                         </button>
+                         <button 
+                            onClick={() => onSave(key)}
+                            disabled={!key.trim()}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-900/30 text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                         >
+                            <CheckCircle2 size={16} /> Save API Key
+                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 const LandingPage: React.FC<{ onLogin: () => void; onGuest: () => void }> = ({ onLogin, onGuest }) => {
   const [logoError, setLogoError] = useState(false);
@@ -90,7 +171,7 @@ const LandingPage: React.FC<{ onLogin: () => void; onGuest: () => void }> = ({ o
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                </svg>
-               Log in with Google
+               Log in with Google / API Key
             </button>
 
             <div className="relative flex items-center py-2">
@@ -125,11 +206,11 @@ const LandingPage: React.FC<{ onLogin: () => void; onGuest: () => void }> = ({ o
 export const App: React.FC = () => {
   // Auth State
   const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated' | 'guest'>('loading');
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   // Navigation State
   const [activeModule, setActiveModule] = useState<'campaign' | 'media' | 'landing' | 'experts' | 'report'>('campaign');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [navLogoError, setNavLogoError] = useState(false);
 
   // Data State
   const [step, setStep] = useState<1 | 2>(1);
@@ -151,6 +232,14 @@ export const App: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // 1. Check for Environment Variable API Key (Automatic Detection)
+        if (process.env.API_KEY) {
+            console.log("API Key detected in environment.");
+            setAuthStatus('authenticated');
+            return;
+        }
+
+        // 2. Check for Project IDX / Google AI Studio environment
         if ((window as any).aistudio) {
             const hasKey = await (window as any).aistudio.hasSelectedApiKey();
             if (hasKey) {
@@ -158,9 +247,14 @@ export const App: React.FC = () => {
             } else {
                 setAuthStatus('unauthenticated');
             }
+            return;
+        } 
+        
+        // 3. Check Local Storage
+        const localKey = localStorage.getItem('gemini_api_key');
+        if (localKey) {
+            setAuthStatus('authenticated');
         } else {
-            // If we are not in the specific environment, we assume unauthenticated initially
-            // allowing the user to click login to bypass if configured via env
             setAuthStatus('unauthenticated');
         }
       } catch (e) {
@@ -181,11 +275,15 @@ export const App: React.FC = () => {
             alert("Login failed. Please try again.");
         }
     } else {
-        // Fallback for environments without window.aistudio (e.g. local dev, standard hosting)
-        // We assume the API key is provided via process.env.API_KEY
-        console.log("No auth provider found, utilizing environment API key.");
-        setAuthStatus('authenticated');
+        // Fallback: Open Manual API Key Modal
+        setShowApiKeyModal(true);
     }
+  };
+
+  const handleSaveKey = (key: string) => {
+      localStorage.setItem('gemini_api_key', key);
+      setShowApiKeyModal(false);
+      setAuthStatus('authenticated');
   };
 
   const handleGuestAccess = () => {
@@ -234,7 +332,11 @@ export const App: React.FC = () => {
 
     } catch (error) {
       console.error(error);
-      alert("Failed to generate campaign. Please check your API key status and try again.");
+      if (error instanceof Error && error.message.includes("API Key")) {
+         setShowApiKeyModal(true); // Re-prompt if key is invalid
+      } else {
+         alert("Failed to generate campaign. Please check your API key status and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -819,7 +921,7 @@ export const App: React.FC = () => {
   if (authStatus === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -829,92 +931,102 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-gray-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center gap-2 cursor-pointer" onClick={() => { setActiveModule('campaign'); reset(); }}>
-                {(!navLogoError && LOGO_URL) ? (
-                    <img src={LOGO_URL} alt="Logo" className="h-8 w-auto" onError={() => setNavLogoError(true)} />
-                ) : (
-                    <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                        <Rocket className="text-white w-5 h-5" />
-                    </div>
-                )}
-                <span className="font-bold text-xl tracking-tight text-gray-900">MushiBrand<span className="text-indigo-600">AI</span></span>
-              </div>
-              
-              <div className="hidden md:ml-10 md:flex md:space-x-8">
-                <button
-                  onClick={() => setActiveModule('campaign')}
-                  className={`${activeModule === 'campaign' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
-                >
-                  <LayoutDashboard size={18} className="mr-2" /> Campaign Studio
-                </button>
-                <button
-                  onClick={() => setActiveModule('media')}
-                  className={`${activeModule === 'media' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
-                >
-                  <ImageIcon size={18} className="mr-2" /> Media Analyzer
-                </button>
-                <button
-                  onClick={() => setActiveModule('landing')}
-                  className={`${activeModule === 'landing' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
-                >
-                  <LayoutTemplate size={18} className="mr-2" /> Landing Page
-                </button>
-                <button
-                  onClick={() => setActiveModule('experts')}
-                  className={`${activeModule === 'experts' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
-                >
-                  <Users size={18} className="mr-2" /> Expert Chat
-                </button>
-                <button
-                  onClick={() => setActiveModule('report')}
-                  className={`${activeModule === 'report' ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium h-16 transition-colors`}
-                >
-                  <FileText size={18} className="mr-2" /> Report
-                </button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-50 flex font-sans text-gray-900">
+      {/* Sidebar for Desktop */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full z-20">
+         <div className="p-6 flex items-center gap-3">
+            {LOGO_URL ? <img src={LOGO_URL} className="w-8 h-8" alt="Logo" /> : <div className="w-8 h-8 bg-indigo-600 rounded-lg"></div>}
+            <span className="font-bold text-lg tracking-tight">MushiBrandAI</span>
+         </div>
+         
+         <nav className="flex-1 px-4 space-y-2 mt-4">
+            <button 
+                onClick={() => setActiveModule('campaign')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeModule === 'campaign' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+                <LayoutDashboard size={20} /> Campaign Studio
+            </button>
+            <button 
+                onClick={() => setActiveModule('media')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeModule === 'media' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+                <ImageIcon size={20} /> Media Analyzer
+            </button>
+            <button 
+                onClick={() => setActiveModule('landing')}
+                disabled={!campaign}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeModule === 'landing' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : !campaign ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+                <LayoutTemplate size={20} /> Landing Page
+            </button>
+            <button 
+                onClick={() => setActiveModule('experts')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeModule === 'experts' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+                <Users size={20} /> Expert Chat
+            </button>
+            <button 
+                onClick={() => setActiveModule('report')}
+                disabled={!campaign}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeModule === 'report' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : !campaign ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+                <FileText size={20} /> Strategy Report
+            </button>
+         </nav>
 
-            <div className="flex items-center">
-               <div className="flex items-center gap-2">
-                 {authStatus === 'guest' && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium border border-orange-200">Guest Mode</span>}
-                 {authStatus === 'authenticated' && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium border border-green-200">Pro Plan</span>}
-               </div>
-               <div className="-mr-2 flex items-center md:hidden ml-4">
-                  <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none">
-                    {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                  </button>
-               </div>
-            </div>
-          </div>
-        </div>
+         <div className="p-4 border-t border-gray-100">
+             <button onClick={() => setShowApiKeyModal(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-indigo-600 transition-colors">
+                <Key size={14} /> Update API Key
+             </button>
+         </div>
+      </aside>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-gray-200">
-            <div className="pt-2 pb-3 space-y-1 px-4">
-               {['campaign', 'media', 'landing', 'experts', 'report'].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => { setActiveModule(m as any); setMobileMenuOpen(false); }}
-                    className={`block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium ${activeModule === m ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'}`}
-                  >
-                    {m.charAt(0).toUpperCase() + m.slice(1)}
-                  </button>
-               ))}
-            </div>
-          </div>
-        )}
-      </nav>
+      {/* Main Content */}
+      <main className="flex-1 md:ml-64 min-h-screen flex flex-col">
+         {/* Mobile Header */}
+         <header className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-30">
+             <div className="flex items-center gap-2">
+                {LOGO_URL ? <img src={LOGO_URL} className="w-8 h-8" alt="Logo" /> : <div className="w-8 h-8 bg-indigo-600 rounded-lg"></div>}
+                <span className="font-bold text-lg">MushiBrandAI</span>
+             </div>
+             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-600">
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+             </button>
+         </header>
 
-      <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {renderContent()}
+         {/* Mobile Menu Overlay */}
+         {mobileMenuOpen && (
+             <div className="md:hidden fixed inset-0 z-40 bg-white pt-20 px-4 animate-in slide-in-from-top-10 duration-200">
+                 <nav className="space-y-2">
+                    <button onClick={() => { setActiveModule('campaign'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium ${activeModule === 'campaign' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}>
+                        <LayoutDashboard size={20} /> Campaign Studio
+                    </button>
+                    <button onClick={() => { setActiveModule('media'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium ${activeModule === 'media' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}>
+                        <ImageIcon size={20} /> Media Analyzer
+                    </button>
+                    <button onClick={() => { setActiveModule('landing'); setMobileMenuOpen(false); }} disabled={!campaign} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium ${activeModule === 'landing' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'} ${!campaign && 'opacity-50'}`}>
+                        <LayoutTemplate size={20} /> Landing Page
+                    </button>
+                    <button onClick={() => { setActiveModule('experts'); setMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium ${activeModule === 'experts' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'}`}>
+                        <Users size={20} /> Expert Chat
+                    </button>
+                     <button onClick={() => { setActiveModule('report'); setMobileMenuOpen(false); }} disabled={!campaign} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium ${activeModule === 'report' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600'} ${!campaign && 'opacity-50'}`}>
+                        <FileText size={20} /> Strategy Report
+                    </button>
+                 </nav>
+             </div>
+         )}
+
+         <div className="p-4 md:p-8 flex-1 overflow-x-hidden">
+            {renderContent()}
+         </div>
       </main>
+
+      <ApiKeyModal 
+         isOpen={showApiKeyModal} 
+         onClose={() => setShowApiKeyModal(false)} 
+         onSave={handleSaveKey} 
+      />
     </div>
   );
 };
